@@ -9,7 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB connection 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@yoga-master.2s32u.mongodb.net/?retryWrites=true&w=majority&appName=yoga-master`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -41,6 +41,43 @@ async function run() {
       const result = await classesCollection.insertOne(newClass);
       res.send(result);
     });
+
+    app.get('/classes', async (req, res) => {
+      const query = { status: 'approved' };
+      const classes = await classesCollection.find(query).toArray();
+      res.send(classes);
+    });
+
+    // get classes by instructor email address
+    app.get('/classes/:email', async (req, res)=>{
+      const email = req.params.email;
+      const query = { instructorEmail: email };
+      const classes = await classesCollection.find(query).toArray();
+      res.send(classes);
+    });
+
+    // manage classes
+    app.get('/classes-manage', async (req,res)=>{
+      const classes = await classesCollection.find().toArray();
+      res.send(classes);
+    }); 
+
+    // update classes status and reason
+    app.patch('/change-status/:id', async (req,res) => {
+      const id = req.params.id;
+      const status = req.body.status;
+      const reason = req.body.reason;
+      const filter = {_id: new ObjectId(id)};
+      const option = { upsert: true };
+      const updateDoc = { 
+        $set: {
+            status: status,
+            reason: reason,
+          }, 
+      };
+      const result = await classesCollection.updateOne(filter,updateDoc,option);
+      res.send(result);
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
