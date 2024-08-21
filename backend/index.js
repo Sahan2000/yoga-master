@@ -29,7 +29,7 @@ async function run() {
     // Create a database and collections
     const db = client.db("yoga-master");
     const usersCollection = db.collection("users");
-    const classesCollection = db.collection("classes");
+    const classesCollection = db.collection("classes"); 
     const cartCollection = db.collection("cart");
     const paymentCollection = db.collection("payment");
     const enrolledCollection = db.collection("enrolled");
@@ -43,8 +43,7 @@ async function run() {
     });
 
     app.get('/classes', async (req, res) => {
-      const query = { status: 'approved' };
-      const classes = await classesCollection.find(query).toArray();
+      const classes = await classesCollection.find().toArray();
       res.send(classes);
     });
 
@@ -77,7 +76,57 @@ async function run() {
       };
       const result = await classesCollection.updateOne(filter,updateDoc,option);
       res.send(result);
+    });
+
+    // get approved classes
+    app.get('/classes-approve', async (req,res)=>{
+      const query = { status: 'approved' };
+      const result = await classesCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    //get single classes
+    app.get('/class/:id', async (req,res) =>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await classesCollection.find(query).next();
+      res.send(result);
+    });
+
+    // update class details (all data)
+    app.put('/update-class/:id', async (req,res)=>{
+      const id = req.params.id;
+      const updatedClass = req.body;
+      const filter = {_id: new ObjectId(id)};
+      const option = { upsert: true }
+      const updateDoc = { 
+        $set: {
+          name: updatedClass.name,
+          description: updatedClass.description,
+          price: updatedClass.price,
+          availableSeats: updatedClass.availableSeats,
+          videoLink: updatedClass.videoLink,
+          status: 'pending',
+        }
+      };
+      const result = await classesCollection.updateOne(filter,updateDoc,option);
+      res.send(result);
     })
+
+    // Get single class by id for details page
+    app.get('/class/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await classesCollection.findOne(query);
+      res.send(result);
+  })
+
+    // Carts Routes
+    app.post('/add-to-cart', async (req, res) => {
+      const newCart = await req.body;
+      const result = await cartCollection.insertOne(newCart);
+      res.send(result);
+    });
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
